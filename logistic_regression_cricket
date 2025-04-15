@@ -1,0 +1,43 @@
+import gradio as gr
+from sklearn.linear_model import LogisticRegression
+import numpy as np
+
+# Sample data: [runs_required, wickets_lost, overs_remaining]
+X = np.array([
+    [40, 2, 5],
+    [70, 5, 5],
+    [20, 3, 4],
+    [80, 6, 6],
+    [35, 4, 3],
+    [100, 3, 10],
+    [30, 7, 4]
+])
+y = np.array([1, 0, 1, 0, 1, 1, 0])  # 1 = win, 0 = lose
+
+# Train model
+model = LogisticRegression()
+model.fit(X, y)
+
+# Prediction logic
+def predict_victory(target_score, current_score, wickets_lost, overs_remaining):
+    runs_required = target_score - current_score
+    x = np.array([[runs_required, wickets_lost, overs_remaining]])
+    prob = model.predict_proba(x)[0][1]
+    result = "Likely Win" if prob > 0.5 else "Likely Lose"
+    return f"{result} (Confidence: {prob:.2f})"
+
+# Gradio UI
+demo = gr.Interface(
+    fn=predict_victory,
+    inputs=[
+        gr.Number(label="Target Score"),
+        gr.Number(label="Current Score"),
+        gr.Number(label="Wickets Lost"),
+        gr.Number(label="Overs Remaining")
+    ],
+    outputs="text",
+    title="Cricket Chase Predictor",
+    description="Predict if a team will likely win or lose during a run chase."
+)
+
+demo.launch()
