@@ -1,0 +1,27 @@
+from sklearn.cluster import KMeans
+
+# Simulated dataset (2D points)
+X = np.array([
+    [1, 2], [1.5, 1.8], [5, 8], [8, 8],
+    [1, 0.6], [9, 11], [8, 2], [10, 2],
+    [9, 3]
+])
+kmeans = KMeans(n_clusters=3, random_state=0)
+kmeans.fit(X)
+
+def find_cluster(x, y):
+    point = np.array([[x, y]])
+    cluster = kmeans.predict(point)[0]
+    return f"Cluster #{cluster}"
+
+demo = gr.Interface(
+    fn=find_cluster,
+    inputs=[
+        gr.Number(label="X Coordinate"),
+        gr.Number(label="Y Coordinate")
+    ],
+    outputs="text",
+    title="K-Means Cluster Finder"
+)
+
+demo.launch()
