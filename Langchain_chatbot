@@ -1,0 +1,50 @@
+# ✅ Install dependencies
+!pip install -q langchain google-generativeai langchain-community
+
+# ✅ Import
+import google.generativeai as genai
+from langchain_core.language_models import LLM
+from langchain_core.outputs import Generation
+from langchain_core.runnables import Runnable
+from typing import List, Optional
+
+from langchain.prompts import PromptTemplate
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+
+# ✅ Configure Gemini
+genai.configure(api_key="YOUR_API_KEY_HERE")  # Replace with your actual API key
+
+# ✅ Custom Gemini LLM Wrapper for LangChain
+class GeminiLLM(LLM):
+    model_name: str = "models/gemini-1.5-pro-latest"
+    temperature: float = 0.7
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        model = genai.GenerativeModel(self.model_name)
+        chat = model.start_chat()
+        response = chat.send_message(prompt)
+        return response.text
+
+    @property
+    def _llm_type(self) -> str:
+        return "google_gemini_custom"
+
+# ✅ Set up LangChain Conversation Chain with memory
+llm = GeminiLLM()
+memory = ConversationBufferMemory()
+chatbot = ConversationChain(llm=llm, memory=memory, verbose=False)
+
+# ✅ Terminal-style loop for chatting
+print("Gemini LangChain Chatbot (type 'exit' to stop) 👇\n")
+
+while True:
+    user_input = input("You: ")
+    if user_input.lower() in ["exit", "quit"]:
+        print("👋 Goodbye!")
+        break
+    try:
+        response = chatbot.run(user_input)
+        print("Gemini:", response.strip(), "\n")
+    except Exception as e:
+        print("⚠️ Error:", e)
