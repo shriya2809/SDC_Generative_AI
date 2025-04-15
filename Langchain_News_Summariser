@@ -1,0 +1,58 @@
+# ✅ Install required packages
+!pip install -q langchain google-generativeai
+
+# ✅ Import libraries
+import google.generativeai as genai
+from langchain_core.language_models import LLM
+from langchain_core.outputs import Generation
+from typing import List, Optional
+
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+
+# ✅ Configure your Gemini API key
+genai.configure(api_key="YOUR_API_KEY_HERE")  # Replace with your key
+
+# ✅ Custom Gemini LLM class for LangChain
+class GeminiLLM(LLM):
+    model_name: str = "models/gemini-1.5-pro-latest"
+    temperature: float = 0.5
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        model = genai.GenerativeModel(self.model_name)
+        chat = model.start_chat()
+        response = chat.send_message(prompt)
+        return response.text
+
+    @property
+    def _llm_type(self) -> str:
+        return "google_gemini_custom"
+
+# ✅ Define summarization prompt
+template = """
+You are a helpful assistant that summarizes news articles.
+
+Summarize the following article in 3-4 sentences:
+
+{article}
+"""
+
+prompt = PromptTemplate(input_variables=["article"], template=template)
+
+# ✅ Create LangChain LLMChain
+llm = GeminiLLM()
+summarizer = LLMChain(llm=llm, prompt=prompt)
+
+# ✅ Run loop to input news articles and get summaries
+print("📰 News Summarizer (type 'exit' to stop) 👇\n")
+
+while True:
+    article = input("Paste news article: ")
+    if article.lower() in ["exit", "quit"]:
+        print("👋 Goodbye!")
+        break
+    try:
+        summary = summarizer.run({"article": article})
+        print("\n🧠 Summary:", summary.strip(), "\n")
+    except Exception as e:
+        print("⚠️ Error:", e)
