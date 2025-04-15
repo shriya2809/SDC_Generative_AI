@@ -1,0 +1,25 @@
+# ✅ STEP 1: Install & import
+!pip install -q google-generativeai
+
+import google.generativeai as genai
+from IPython.display import Markdown
+
+# ✅ STEP 2: Configure Gemini
+genai.configure(api_key="YOUR_API_KEY_HERE")  # ← Replace with your API key
+
+model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
+chat = model.start_chat()
+
+# ✅ STEP 3: Run chat loop (type 'exit' to stop)
+while True:
+    user_input = input("You: ")
+
+    if user_input.lower() in ["exit", "quit"]:
+        print("Goodbye 👋")
+        break
+
+    try:
+        response = chat.send_message(user_input)
+        print("\nGemini:", response.text, "\n")
+    except Exception as e:
+        print(f"⚠️ Error: {e}")
