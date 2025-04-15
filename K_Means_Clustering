@@ -1,0 +1,46 @@
+import gradio as gr
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+
+def generate_and_cluster(n_points, n_clusters):
+    # Generate random 2D data points
+    X = np.random.rand(n_points, 2) * 10  # points between 0 and 10
+
+    # Perform K-Means clustering
+    model = KMeans(n_clusters=n_clusters, random_state=0)
+    labels = model.fit_predict(X)
+
+    # Plot clusters
+    plt.figure(figsize=(6, 5))
+    for i in range(n_clusters):
+        cluster_points = X[labels == i]
+        plt.scatter(cluster_points[:, 0], cluster_points[:, 1], label=f"Cluster {i}")
+
+    # Plot centroids
+    plt.scatter(model.cluster_centers_[:, 0], model.cluster_centers_[:, 1],
+                color='black', marker='x', s=100, label='Centroids')
+
+    plt.title("K-Means Clustering")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.legend()
+    plt.tight_layout()
+
+    # Save plot
+    plt.savefig("kmeans_dynamic.png")
+    plt.close()
+    return "kmeans_dynamic.png"
+
+demo = gr.Interface(
+    fn=generate_and_cluster,
+    inputs=[
+        gr.Slider(5, 200, step=1, label="Number of Data Points"),
+        gr.Slider(1, 10, step=1, label="Number of Clusters")
+    ],
+    outputs=gr.Image(type="filepath"),
+    title="K-Means Clustering (Customizable)",
+    description="Choose how many random points to generate and how many clusters to detect."
+)
+
+demo.launch(share=True)
