@@ -1,0 +1,39 @@
+import gradio as gr
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.datasets import mnist
+import numpy as np
+
+# Load and preprocess MNIST data
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+x_train = x_train[..., np.newaxis] / 255.0
+x_test = x_test[..., np.newaxis] / 255.0
+
+# Build CNN model
+model = Sequential([
+    Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(64, activation='relu'),
+    Dense(10, activation='softmax')
+])
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.fit(x_train, y_train, epochs=3, validation_data=(x_test, y_test))
+
+# Prediction function
+def predict_digit(img):
+    img = img.reshape(1, 28, 28, 1)
+    pred = model.predict(img)[0]
+    return {str(i): float(pred[i]) for i in range(10)}
+
+# Gradio UI
+demo = gr.Interface(
+    fn=predict_digit,
+    inputs=gr.Image(shape=(28, 28), image_mode="L", invert_colors=True, source="canvas"),
+    outputs=gr.Label(num_top_classes=3),
+    title="CNN Handwritten Digit Classifier",
+    description="Draw a digit (0–9) and the model will try to classify it using a CNN."
+)
+
+demo.launch(share=True)
