@@ -1,0 +1,56 @@
+import gradio as gr
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# Load IMDb dataset
+vocab_size = 10000
+maxlen = 200
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.imdb.load_data(num_words=vocab_size)
+
+# Pad sequences
+x_train = pad_sequences(x_train, maxlen=maxlen)
+x_test = pad_sequences(x_test, maxlen=maxlen)
+
+# Build RNN model
+model = Sequential([
+    Embedding(vocab_size, 64, input_length=maxlen),
+    LSTM(64),
+    Dense(1, activation='sigmoid')
+])
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.fit(x_train, y_train, epochs=2, validation_data=(x_test, y_test), batch_size=64)
+
+# Word index mapping
+word_index = tf.keras.datasets.imdb.get_word_index()
+index_word = {v+3: k for k, v in word_index.items()}
+index_word[0] = "<PAD>"
+index_word[1] = "<START>"
+index_word[2] = "<UNK>"
+index_word[3] = "<UNUSED>"
+
+def encode_review(review):
+    tokens = review.lower().split()
+    encoded = [1]  # Start token
+    for word in tokens:
+        encoded.append(word_index.get(word, 2))  # 2 = unknown word
+    return pad_sequences([encoded], maxlen=maxlen)
+
+# Prediction function
+def predict_sentiment(review):
+    encoded = encode_review(review)
+    prediction = model.predict(encoded)[0][0]
+    sentiment = "Positive 😊" if prediction > 0.5 else "Negative 😠"
+    return f"{sentiment} (Confidence: {prediction:.2f})"
+
+# Gradio UI
+demo = gr.Interface(
+    fn=predict_sentiment,
+    inputs=gr.Textbox(lines=4, placeholder="Enter a movie review..."),
+    outputs="text",
+    title="RNN Movie Review Sentiment Analyzer",
+    description="Classifies IMDb reviews as Positive or Negative using an LSTM RNN."
+)
+
+demo.launch(share=True)
