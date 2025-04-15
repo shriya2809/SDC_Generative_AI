@@ -1,0 +1,42 @@
+import gradio as gr
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.linear_model import LogisticRegression
+
+# Larger and more balanced dataset
+emails = [
+    "Congratulations! You have won a $1000 gift card. Click here to claim now.",
+    "Earn money from home!!! Just sign up today!",
+    "Get cheap meds online. Limited offer!",
+    "Free vacation awaits you! Respond now!",
+    "Exclusive deal for you. Click to find out!",
+    "Meeting at 3PM with the product team.",
+    "Your Amazon order has been shipped.",
+    "Can you send me the report by EOD?",
+    "Lunch tomorrow at 1pm?",
+    "Please review the attached document."
+]
+labels = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]  # 1 = spam, 0 = not spam
+
+# Vectorize and train
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(emails)
+model = LogisticRegression()
+model.fit(X, labels)
+
+# Prediction function with threshold
+def detect_spam(text):
+    vect = vectorizer.transform([text])
+    prob = model.predict_proba(vect)[0][1]  # Probability of class "1" (spam)
+    label = "Spam" if prob > 0.5 else "Not Spam"
+    return f"{label} (Confidence: {prob:.2f})"
+
+# Gradio Interface
+demo = gr.Interface(
+    fn=detect_spam,
+    inputs=gr.Textbox(lines=4, placeholder="Paste email content here..."),
+    outputs="text",
+    title="Improved Email Spam Detector",
+    description="Enter an email to check whether it's spam or not."
+)
+
+demo.launch()
