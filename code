@@ -1,0 +1,37 @@
+import gradio as gr
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+# Sample training data: [square_feet, bedrooms], price
+X = np.array([
+    [1500, 3],
+    [2000, 4],
+    [2500, 4],
+    [1200, 2],
+    [1800, 3],
+])
+y = np.array([300000, 400000, 500000, 250000, 360000])
+
+# Train model
+model = LinearRegression()
+model.fit(X, y)
+
+# Prediction function
+def predict_price(sqft, bedrooms):
+    input_data = np.array([[sqft, bedrooms]])
+    price = model.predict(input_data)[0]
+    return f"Estimated Price: ${price:,.2f}"
+
+# Gradio Interface
+demo = gr.Interface(
+    fn=predict_price,
+    inputs=[
+        gr.Number(label="Square Footage"),
+        gr.Number(label="Number of Bedrooms")
+    ],
+    outputs="text",
+    title="House Price Predictor (Linear Regression)",
+    description="Enter house size and bedrooms to estimate price."
+)
+
+demo.launch()
