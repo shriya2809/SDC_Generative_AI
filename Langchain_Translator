@@ -1,0 +1,57 @@
+# ✅ Install required packages
+!pip install -q langchain google-generativeai
+
+# ✅ Import necessary modules
+import google.generativeai as genai
+from langchain_core.language_models import LLM
+from typing import List, Optional
+
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+
+# ✅ Configure Gemini API key
+genai.configure(api_key="YOUR_API_KEY_HERE")  # Replace with your Gemini key
+
+# ✅ Custom Gemini LLM wrapper
+class GeminiLLM(LLM):
+    model_name: str = "models/gemini-1.5-pro-latest"
+    temperature: float = 0.5
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        model = genai.GenerativeModel(self.model_name)
+        chat = model.start_chat()
+        response = chat.send_message(prompt)
+        return response.text
+
+    @property
+    def _llm_type(self) -> str:
+        return "google_gemini_custom"
+
+# ✅ Prompt for translation
+template = """
+Translate the following sentence to {language}:
+
+"{sentence}"
+"""
+
+prompt = PromptTemplate(input_variables=["sentence", "language"], template=template)
+
+# ✅ Build LangChain chain
+llm = GeminiLLM()
+translator = LLMChain(llm=llm, prompt=prompt)
+
+# ✅ Terminal-style translation loop
+print("🌍 Language Translator (type 'exit' to stop) 👇\n")
+
+while True:
+    sentence = input("Enter sentence to translate: ")
+    if sentence.lower() in ["exit", "quit"]:
+        print("👋 Goodbye!")
+        break
+
+    language = input("Translate to (e.g. Spanish, French): ")
+    try:
+        output = translator.run({"sentence": sentence, "language": language})
+        print("\n🔤 Translation:", output.strip(), "\n")
+    except Exception as e:
+        print("⚠️ Error:", e)
