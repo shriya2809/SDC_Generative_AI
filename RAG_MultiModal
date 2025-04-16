@@ -1,0 +1,55 @@
+# Install required libraries
+!pip install --quiet google-generativeai==0.8.4 faiss-cpu pillow
+
+# Imports
+import os
+import google.generativeai as genai
+from IPython.display import display
+from PIL import Image
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from google.colab import files
+
+# Set Gemini API key
+os.environ["GOOGLE_API_KEY"] = "YOUR_GEMINI_API_KEY_HERE"  # ⬅️ Replace this
+genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+
+# Upload image
+uploaded = files.upload()
+image_path = list(uploaded.keys())[0]
+image = Image.open(image_path)
+display(image)
+
+# Load knowledge base
+text = """
+Bananas are high in potassium and help in muscle function and heart health.
+Drinking water is essential to maintain hydration and bodily functions.
+Photosynthesis is the process plants use to convert light into energy.
+A healthy diet includes fruits, vegetables, and moderate protein and carbs.
+"""
+splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+docs = splitter.create_documents([text])
+
+# Create vector store
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+vectorstore = FAISS.from_documents(docs, embeddings)
+
+# Query input
+query = input("Enter your question: ")
+retriever = vectorstore.as_retriever()
+relevant_docs = retriever.get_relevant_documents(query)
+context = "\n".join([doc.page_content for doc in relevant_docs])
+
+# Run multimodal inference using Gemini SDK
+model = genai.GenerativeModel("gemini-1.5-pro-latest")
+response = model.generate_content([
+    {"role": "user", "parts": [
+        f"Here is some context:\n{context}\n\nMy question: {query}",
+        image
+    ]}
+])
+
+# Output result
+print("\n🧠 Gemini's Answer:\n", response.text)
