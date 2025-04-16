@@ -1,0 +1,55 @@
+# ✅ Install required packages
+!pip install --upgrade --quiet langchain google-generativeai==0.8.4 faiss-cpu google-ai-generativelanguage==0.6.15
+!pip install biopython langchain-google-genai
+
+# ✅ Imports
+import os
+from Bio import Entrez
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains import RetrievalQA
+
+# ✅ API Key and Email Setup
+os.environ["GOOGLE_API_KEY"] = "YOUR_GEMINI_API_KEY_HERE"  # <-- REPLACE THIS
+Entrez.email = "your-email@example.com"  # <-- REPLACE THIS
+
+# ✅ Fetch PubMed articles with abstracts
+def fetch_pubmed_articles(query, max_results=5):
+    search = Entrez.esearch(db="pubmed", term=query, retmax=max_results)
+    search_results = Entrez.read(search)
+    id_list = search_results["IdList"]
+
+    fetch = Entrez.efetch(db="pubmed", id=",".join(id_list), rettype="abstract", retmode="text")
+    abstracts = fetch.read().split("\n\n")
+    return abstracts
+
+# ✅ Create a vectorstore from the fetched articles
+def create_vectorstore_from_articles(articles):
+    text = " ".join(articles)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    docs = splitter.create_documents([text])
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    return FAISS.from_documents(docs, embeddings)
+
+# ✅ Use Gemini to generate a response
+def generate_health_advice(query, vectorstore):
+    retriever = vectorstore.as_retriever()
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro-latest", temperature=0)
+    qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever, chain_type="stuff")
+    return qa_chain.run(query)
+
+# ✅ Full chatbot pipeline
+def health_advice_chatbot(query):
+    articles = fetch_pubmed_articles(query)
+    if not articles:
+        return "No relevant articles found."
+    vectorstore = create_vectorstore_from_articles(articles)
+    return generate_health_advice(query, vectorstore)
+
+# ✅ Run from terminal
+if __name__ == "__main__":
+    query = input("Enter your health query (e.g., 'benefits of fasting', 'vitamin D and immunity'): ")
+    answer = health_advice_chatbot(query)
+    print("\n💡 Health Advice:\n", answer)
