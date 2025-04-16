@@ -1,0 +1,42 @@
+# ✅ STEP 2: Imports & Setup
+import os
+from youtube_transcript_api import YouTubeTranscriptApi
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain.chains import RetrievalQA
+
+# 🔑 Set your Gemini API Key here
+os.environ["GOOGLE_API_KEY"] = "YOUR_GEMINI_API_KEY_HERE"  # Replace this string with your actual key
+
+# ✅ STEP 3: Extract transcript
+def get_transcript(video_url):
+  try:
+    video_id = video_url.split("v=")[-1].split("&")[0]
+    transcript = YouTubeTranscriptApi.get_transcript(video_id)
+    return " ".join([d['text'] for d in transcript])
+  except Exception as e:
+    return f"Error fetching transcript: {str(e)}"
+
+# ✅ STEP 4: Create FAISS Vector Store
+def create_vectorstore(text):
+  splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+  docs = splitter.create_documents([text])
+  embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+  return FAISS.from_documents(docs, embeddings)
+
+# ✅ STEP 5: Run RAG with Gemini model
+def summarize_youtube(video_url):
+  transcript = get_transcript(video_url)
+  if transcript.startswith("Error"):
+    return transcript
+  vectorstore = create_vectorstore(transcript)
+  retriever = vectorstore.as_retriever()
+  llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0)
+  qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever, chain_type="stuff")
+  return qa_chain.run("Summarize the key points of this YouTube video.")
+
+# ✅ STEP 6: Input the YouTube URL and get the summary
+video_url = input("📥 Enter YouTube video URL: ")
+summary = summarize_youtube(video_url)
+print("\n📌 Summary:\n", summary)
